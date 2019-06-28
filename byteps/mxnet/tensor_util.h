@@ -20,7 +20,6 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <cassert>
-
 #include "../common/common.h"
 #include "cuda_util.h"
 #include "util.h"

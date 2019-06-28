@@ -13,12 +13,11 @@
 // limitations under the License.
 // =============================================================================
 
+#include "core_loops.h"
 #include <cuda_runtime.h>
 #include <chrono>
 #include <memory>
-
 #include "common.h"
-#include "core_loops.h"
 #include "global.h"
 #include "logging.h"
 

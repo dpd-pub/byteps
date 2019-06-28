@@ -14,13 +14,11 @@
 // limitations under the License.
 // =============================================================================
 
+#include "ops.h"
 #include <atomic>
-
 #include "../common/operations.h"
-
 #include "adapter.h"
 #include "cuda_util.h"
-#include "ops.h"
 #include "ready_event.h"
 #include "tensor_util.h"
 

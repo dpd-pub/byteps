@@ -14,9 +14,7 @@
 // =============================================================================
 
 #include "scheduled_queue.h"
-
 #include <algorithm>
-
 #include "global.h"
 #include "logging.h"
 

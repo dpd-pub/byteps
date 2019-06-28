@@ -14,12 +14,11 @@
 // limitations under the License.
 // =============================================================================
 
+#include "logging.h"
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
-
-#include "logging.h"
 
 namespace byteps {
 namespace common {

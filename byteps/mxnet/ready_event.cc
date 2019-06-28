@@ -18,7 +18,6 @@
 
 #if HAVE_CUDA
 #include <cassert>
-
 #include "ready_event.h"
 
 namespace byteps {

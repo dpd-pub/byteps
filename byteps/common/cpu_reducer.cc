@@ -13,10 +13,9 @@
 // limitations under the License.
 // =============================================================================
 
+#include "cpu_reducer.h"
 #include <string>
 #include <vector>
-
-#include "cpu_reducer.h"
 #include "global.h"
 
 namespace byteps {

@@ -14,9 +14,7 @@
 // =============================================================================
 
 #include "nccl_manager.h"
-
 #include <string>
-
 #include "global.h"
 #include "logging.h"
 
