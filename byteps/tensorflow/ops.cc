@@ -14,12 +14,12 @@
 // limitations under the License.
 // =============================================================================
 
+#include "ops.h"
+
 #include <memory>
 #include <queue>
 #include <thread>
 #include <unordered_map>
-
-#include "ops.h"
 
 using namespace byteps;
 

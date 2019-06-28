@@ -13,11 +13,12 @@
 // limitations under the License.
 // =============================================================================
 
+#include "scheduled_queue.h"
+
 #include <algorithm>
 
 #include "global.h"
 #include "logging.h"
-#include "scheduled_queue.h"
 
 namespace byteps {
 namespace common {

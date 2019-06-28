@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>

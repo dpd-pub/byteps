@@ -79,7 +79,7 @@ const std::string TensorShape::DebugString() const {
   return args.str();
 }
 
-int TensorShape::dims() const { return (int)shape_.size(); }
+int TensorShape::dims() const { return static_cast<int>(shape_.size()); }
 
 int64_t TensorShape::dim_size(int idx) const {
   assert(idx >= 0);

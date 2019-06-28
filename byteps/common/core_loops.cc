@@ -38,22 +38,24 @@ void FinishOrProceed(std::shared_ptr<TensorTableEntry> task) {
     size_t j = (task->offset + task->len) / 4 - 1;
     if (task->device == CPU_DEVICE_ID) {
       BPS_LOG(DEBUG) << "Sampled key=" << task->key
-                     << " rank=" << BytePSGlobal::GetLocalRank()
-                     << " input[0]=" << *((float *)(task->tensor->data()) + i)
-                     << "\tinput[-1]=" << *((float *)(task->tensor->data()) + j)
-                     << "\toutput[0]=" << *((float *)(task->output->data()) + i)
+                     << " rank=" << BytePSGlobal::GetLocalRank() << " input[0]="
+                     << *(reinterpret_cast<float *>(task->tensor->data()) + i)
+                     << "\tinput[-1]="
+                     << *(reinterpret_cast<float *>(task->tensor->data()) + j)
+                     << "\toutput[0]="
+                     << *(reinterpret_cast<float *>(task->output->data()) + i)
                      << "\toutput[-1]="
-                     << *((float *)(task->output->data()) + j)
+                     << *(reinterpret_cast<float *>(task->output->data()) + j)
                      << "\t after stage: " << LogStrings[this_op];
     } else {
       float i0, i1, o0, o1;
-      cudaMemcpy(&i0, (float *)(task->tensor->data()) + i, 4,
+      cudaMemcpy(&i0, reinterpret_cast<float *>(task->tensor->data()) + i, 4,
                  cudaMemcpyDeviceToHost);
-      cudaMemcpy(&i1, (float *)(task->tensor->data()) + j, 4,
+      cudaMemcpy(&i1, reinterpret_cast<float *>(task->tensor->data()) + j, 4,
                  cudaMemcpyDeviceToHost);
-      cudaMemcpy(&o0, (float *)(task->output->data()) + i, 4,
+      cudaMemcpy(&o0, reinterpret_cast<float *>(task->output->data()) + i, 4,
                  cudaMemcpyDeviceToHost);
-      cudaMemcpy(&o1, (float *)(task->output->data()) + j, 4,
+      cudaMemcpy(&o1, reinterpret_cast<float *>(task->output->data()) + j, 4,
                  cudaMemcpyDeviceToHost);
       BPS_LOG(DEBUG) << "Sampled key=" << task->key
                      << " rank=" << BytePSGlobal::GetLocalRank()
@@ -72,7 +74,7 @@ void FinishOrProceed(std::shared_ptr<TensorTableEntry> task) {
   } else {
     BPS_CHECK(task->counter_ptr) << task->tensor_name << " counter_ptr is null";
     int v = task->counter_ptr.get()->fetch_add(1);
-    if (v == (int)(task->total_partnum - 1)) {
+    if (v == static_cast<int>(task->total_partnum - 1)) {
       BPS_CHECK(task->tensor_name != "");
       BPS_LOG(TRACE) << "Rank=" << BytePSGlobal::GetRank()
                      << " finish processing tensor: " << task->tensor_name;
@@ -145,9 +147,9 @@ inline void PostNcclCalls(
   auto len = task->len;
   auto offset = task->offset;
   auto unit_len = tensor->size() / tensor->shape().num_elements();
-  auto p = (char *)(tensor->data()) + offset;
+  auto p = reinterpret_cast<char *>(tensor->data()) + offset;
   if (task->device == CPU_DEVICE_ID) {
-    p = (char *)(task->gpu_ptr) + offset;
+    p = reinterpret_cast<char *>(task->gpu_ptr) + offset;
   }
 
   auto nccl_dtype = getNcclDataType(tensor->dtype());
@@ -170,39 +172,38 @@ inline void PostNcclCalls(
 
   if (this_op == REDUCE) {
     // We reduce to task->output except that it is a CPU tensor
-    auto out_p = (char *)(task->output->data()) + offset;
+    auto out_p = reinterpret_cast<char *>(task->output->data()) + offset;
     if (task->device == CPU_DEVICE_ID && task->tensor == task->output) {
       out_p = p;
     }
 
     if (num_elem_per_gpu) {
       NCCLCHECK(ncclReduceScatter(
-          (const void *)p,
-          (void *)(out_p + nccl_rank * num_elem_per_gpu * unit_len),
+          (const void *)p, (out_p + nccl_rank * num_elem_per_gpu * unit_len),
           (size_t)num_elem_per_gpu, (ncclDataType_t)nccl_dtype,
           (ncclRedOp_t)ncclSum, (ncclComm_t)nccl_comm,
           (cudaStream_t)nccl_stream));
     }
     if (left_elem) {
       NCCLCHECK(ncclReduce((const void *)(p + len - left_elem * unit_len),
-                           (void *)(out_p + len - left_elem * unit_len),
+                           (out_p + len - left_elem * unit_len),
                            (size_t)left_elem, (ncclDataType_t)nccl_dtype,
-                           (ncclRedOp_t)ncclSum, (int)nccl_root,
+                           (ncclRedOp_t)ncclSum, static_cast<int>(nccl_root),
                            (ncclComm_t)nccl_comm, (cudaStream_t)nccl_stream));
     }
   } else {
     if (num_elem_per_gpu) {
       NCCLCHECK(ncclAllGather(
-          (const void *)(p + nccl_rank * num_elem_per_gpu * unit_len),
-          (void *)p, (size_t)num_elem_per_gpu, (ncclDataType_t)nccl_dtype,
+          (const void *)(p + nccl_rank * num_elem_per_gpu * unit_len), p,
+          (size_t)num_elem_per_gpu, (ncclDataType_t)nccl_dtype,
           (ncclComm_t)nccl_comm, (cudaStream_t)nccl_stream));
     }
     if (left_elem) {
-      NCCLCHECK(ncclBroadcast((const void *)(p + len - left_elem * unit_len),
-                              (void *)(p + len - left_elem * unit_len),
-                              (size_t)left_elem, (ncclDataType_t)nccl_dtype,
-                              (int)nccl_root, (ncclComm_t)nccl_comm,
-                              (cudaStream_t)nccl_stream));
+      NCCLCHECK(
+          ncclBroadcast((const void *)(p + len - left_elem * unit_len),
+                        (p + len - left_elem * unit_len), (size_t)left_elem,
+                        (ncclDataType_t)nccl_dtype, static_cast<int>(nccl_root),
+                        (ncclComm_t)nccl_comm, (cudaStream_t)nccl_stream));
     }
   }
 }
@@ -333,19 +334,19 @@ bool RunCopyDevice2HostLoopOnce() {
 
     auto len = task->len;
     auto offset = task->offset;
-    auto p = (char *)(tensor->data()) + offset;
+    auto p = reinterpret_cast<char *>(tensor->data()) + offset;
     if (task->device == CPU_DEVICE_ID) {
-      p = (char *)(task->gpu_ptr) + offset;
+      p = reinterpret_cast<char *>(task->gpu_ptr) + offset;
     }
     auto unit_len = tensor->size() / tensor->shape().num_elements();
     char *cpubuff;
     if (BytePSGlobal::IsCrossPcieSwitch()) {
       BPS_CHECK(task->pcie_cpubuff.size());
-      cpubuff =
-          (char *)(task->pcie_cpubuff[BytePSGlobal::GetPcieSwitchIndex()]) +
-          offset;
+      cpubuff = reinterpret_cast<char *>(
+                    task->pcie_cpubuff[BytePSGlobal::GetPcieSwitchIndex()]) +
+                offset;
     } else {
-      cpubuff = (char *)(task->cpubuff) + offset;
+      cpubuff = reinterpret_cast<char *>(task->cpubuff) + offset;
     }
 
     BPS_CHECK(cpubuff) << task->tensor_name
@@ -361,7 +362,7 @@ bool RunCopyDevice2HostLoopOnce() {
 
     if (copy_len) {
       CUDA_CALL(cudaMemcpyAsync(
-          (void *)(cpubuff + nccl_rank * num_elem_per_gpu * unit_len),
+          (cpubuff + nccl_rank * num_elem_per_gpu * unit_len),
           (const void *)(p + nccl_rank * num_elem_per_gpu * unit_len),
           (size_t)copy_len, (cudaMemcpyKind)cudaMemcpyDeviceToHost,
           (cudaStream_t)*copy_d2h_Stream));
@@ -415,9 +416,10 @@ bool RunPcieReduceLoopOnce() {
 
         // Below we assume there are only two PCIe switch
         // and we run reducer in the context of the second switch
-        reducer->sum((void *)((char *)(task->cpubuff) + total_offset),
-                     (void *)((char *)(task->pcie_cpubuff[0]) + total_offset),
-                     copy_len, tensor->dtype());
+        reducer->sum(
+            (reinterpret_cast<char *>(task->cpubuff) + total_offset),
+            (reinterpret_cast<char *>(task->pcie_cpubuff[0]) + total_offset),
+            copy_len, tensor->dtype());
       }
     }
 
@@ -513,13 +515,13 @@ void CopyHost2Device(std::shared_ptr<byteps::common::TensorTableEntry> task) {
   auto nccl_rank = nccl->GetRank(key, BROADCAST);
   auto len = task->len;
   auto offset = task->offset;
-  auto cpubuff = (char *)(task->cpubuff) + offset;
+  auto cpubuff = reinterpret_cast<char *>(task->cpubuff) + offset;
   BPS_CHECK(cpubuff) << task->tensor_name
                      << ": CPU buffer not initialized, size=" << len;
 
-  auto gpu_addr = (char *)(tensor->data()) + offset;
+  auto gpu_addr = reinterpret_cast<char *>(tensor->data()) + offset;
   if (task->device == CPU_DEVICE_ID) {
-    gpu_addr = (char *)(task->gpu_ptr) + offset;
+    gpu_addr = reinterpret_cast<char *>(task->gpu_ptr) + offset;
   }
 
   auto unit_len = tensor->size() / tensor->shape().num_elements();
@@ -533,7 +535,7 @@ void CopyHost2Device(std::shared_ptr<byteps::common::TensorTableEntry> task) {
 
   if (copy_len) {
     CUDA_CALL(cudaMemcpyAsync(
-        (void *)(gpu_addr + nccl_rank * num_elem_per_gpu * unit_len),
+        (gpu_addr + nccl_rank * num_elem_per_gpu * unit_len),
         (const void *)(cpubuff + nccl_rank * num_elem_per_gpu * unit_len),
         (size_t)copy_len, (cudaMemcpyKind)cudaMemcpyHostToDevice,
         (cudaStream_t)*copy_h2d_stream));

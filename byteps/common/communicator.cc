@@ -16,6 +16,7 @@
 #include "communicator.h"
 #include <cerrno>
 #include <cstring>
+#include <string>
 #include "global.h"
 #include "logging.h"
 namespace byteps {
@@ -220,7 +221,7 @@ int BytePSCommSocket::recvSignal(int* source, void* data, int max_len) {
   BPS_CHECK_LE(rc, max_len)
       << "recv_len=" << rc << ", but given max_len=" << max_len;
 
-  auto message = *(BytePSCommMsg*)data;
+  auto message = *reinterpret_cast<BytePSCommMsg*>(data);
   *source = message.src;
 
   BPS_LOG(TRACE) << "non-root socket recved: src=" << message.src
@@ -240,7 +241,7 @@ int BytePSCommSocket::recvSignalFromRoot(void* data, int max_len) {
 int BytePSCommSocket::broadcastSignal(void* data, int len) {
   for (int i : _members) {
     if (i == _local_rank) continue;
-    sendSignal(i, (void*)data, len);
+    sendSignal(i, data, len);
   }
   return 0;
 }

@@ -41,7 +41,7 @@ class NcclGroupEntry {
 
 class NcclManager {
  public:
-  NcclManager(std::shared_ptr<BytePSComm> comm);
+  explicit NcclManager(std::shared_ptr<BytePSComm> comm);
   ~NcclManager() {
     if (_nccl_stream) {
       CUDA_CALL(cudaStreamDestroy(*_nccl_stream));

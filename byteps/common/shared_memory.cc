@@ -13,6 +13,8 @@
 // limitations under the License.
 // =============================================================================
 
+#include "shared_memory.h"
+
 #include <fcntl.h>
 #include <numa.h>
 #include <sys/mman.h>
@@ -22,7 +24,6 @@
 #include <unistd.h>
 
 #include "global.h"
-#include "shared_memory.h"
 
 namespace byteps {
 namespace common {

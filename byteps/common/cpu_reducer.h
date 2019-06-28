@@ -28,7 +28,7 @@ namespace common {
 
 class CpuReducer {
  public:
-  CpuReducer(std::shared_ptr<BytePSComm> comm);
+  explicit CpuReducer(std::shared_ptr<BytePSComm> comm);
   ~CpuReducer() {
     if (_comm) _comm.reset();
     BPS_LOG(DEBUG) << "Clear CpuReducer";

@@ -24,16 +24,17 @@
 namespace byteps {
 namespace mxnet {
 
+// TODO: avoid using namespace
 using namespace byteps::common;
 
 template <class T>
 class MXTensor : public Tensor {
  public:
-  MXTensor(T* tensor);
-  virtual const DataType dtype() const override;
-  virtual const TensorShape shape() const override;
-  virtual const void* data() const override;
-  virtual int64_t size() const override;
+  explicit MXTensor(T* tensor);
+  const DataType dtype() const override;
+  const TensorShape shape() const override;
+  const void* data() const override;
+  int64_t size() const override;
 
  protected:
   T* tensor_;

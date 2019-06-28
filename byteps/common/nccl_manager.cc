@@ -14,6 +14,9 @@
 // =============================================================================
 
 #include "nccl_manager.h"
+
+#include <string>
+
 #include "global.h"
 #include "logging.h"
 
@@ -76,7 +79,8 @@ void NcclManager::ConstructRings() {
   auto local_rank = BytePSGlobal::GetLocalRank();
   std::vector<int> peers;
   int first_peer = local_rank / _nccl_pcie_size * _nccl_pcie_size;
-  for (int i = first_peer; i < first_peer + (int)_nccl_pcie_size; i++) {
+  for (int i = first_peer; i < first_peer + static_cast<int>(_nccl_pcie_size);
+       i++) {
     peers.push_back(i);
     log_string = log_string + " " + std::to_string(i);
   }
@@ -85,9 +89,12 @@ void NcclManager::ConstructRings() {
   BPS_LOG(DEBUG) << log_string;
 
   // init and sycn NCCL-reduce-id using out-of-band socket
-  _nccl_id = (ncclUniqueId*)malloc(sizeof(ncclUniqueId) * _nccl_num_rings);
-  _nccl_comm = (ncclComm_t*)malloc(sizeof(ncclComm_t) * _nccl_num_rings);
-  _nccl_stream = (cudaStream_t*)malloc(sizeof(cudaStream_t) * _nccl_num_rings);
+  _nccl_id = reinterpret_cast<ncclUniqueId*>(
+      malloc(sizeof(ncclUniqueId) * _nccl_num_rings));
+  _nccl_comm = reinterpret_cast<ncclComm_t*>(
+      malloc(sizeof(ncclComm_t) * _nccl_num_rings));
+  _nccl_stream = reinterpret_cast<cudaStream_t*>(
+      malloc(sizeof(cudaStream_t) * _nccl_num_rings));
   _nccl_size = _nccl_pcie_size;
   int greatest_priority;
   CUDA_CALL(cudaDeviceGetStreamPriorityRange(NULL, &greatest_priority));
@@ -101,7 +108,8 @@ void NcclManager::ConstructRings() {
     if (local_rank == _signal_comm->getRoot()) {  // only root create nccl id
       NCCLCHECK(ncclGetUniqueId(nccl_id));
       // the log is just for debug, the actual length of nccl id is 128
-      BPS_LOG(DEBUG) << "root nccl_id is " << (*(long long int*)nccl_id);
+      BPS_LOG(DEBUG) << "root nccl_id is "
+                     << (*reinterpret_cast<int64_t*>(nccl_id));
       // TODO: change to BytePSCommSignal format
       _signal_comm->broadcastSignal(nccl_id, sizeof(ncclUniqueId));
 
@@ -111,7 +119,8 @@ void NcclManager::ConstructRings() {
       int rc = _signal_comm->recvSignal(&src, nccl_id, sizeof(ncclUniqueId));
       BPS_CHECK_EQ(rc, sizeof(ncclUniqueId))
           << rc << ", " << sizeof(ncclUniqueId);
-      BPS_LOG(DEBUG) << "recv nccl_id is " << (*(long long int*)nccl_id)
+      BPS_LOG(DEBUG) << "recv nccl_id is "
+                     << (*reinterpret_cast<int64_t*>(nccl_id))
                      << ", local_rank=" << local_rank;
     }
 
@@ -241,10 +250,12 @@ void NcclManagerExpr::ConstructRings() {
   auto local_size = BytePSGlobal::GetLocalSize();
   auto local_rank = BytePSGlobal::GetLocalRank();
   // init and sycn NCCL-reduce-id using out-of-band socket
-  _nccl_id = (ncclUniqueId*)malloc(sizeof(ncclUniqueId) * _nccl_pcie_size * 2);
-  _nccl_comm = (ncclComm_t*)malloc(sizeof(ncclComm_t) * _nccl_pcie_size * 2);
-  _nccl_stream =
-      (cudaStream_t*)malloc(sizeof(cudaStream_t) * _nccl_pcie_size * 2);
+  _nccl_id = reinterpret_cast<ncclUniqueId*>(
+      malloc(sizeof(ncclUniqueId) * _nccl_num_rings * 2));
+  _nccl_comm = reinterpret_cast<ncclComm_t*>(
+      malloc(sizeof(ncclComm_t) * _nccl_num_rings * 2));
+  _nccl_stream = reinterpret_cast<cudaStream_t*>(
+      malloc(sizeof(cudaStream_t) * _nccl_num_rings * 2));
   int greatest_priority;
   CUDA_CALL(cudaDeviceGetStreamPriorityRange(NULL, &greatest_priority));
 
@@ -257,14 +268,16 @@ void NcclManagerExpr::ConstructRings() {
     if (BytePSGlobal::IsRootDevice()) {  // only root create nccl id
       NCCLCHECK(ncclGetUniqueId(nccl_id));
       // the log is just for debug, the actual length of nccl id is 128
-      BPS_LOG(DEBUG) << "root nccl_id is " << (*(long long int*)nccl_id);
+      BPS_LOG(DEBUG) << "root nccl_id is "
+                     << (*reinterpret_cast<int64_t*>(nccl_id));
       _signal_comm->broadcastSignal(nccl_id, sizeof(ncclUniqueId));
     } else {
       int src;
       int rc = _signal_comm->recvSignal(&src, nccl_id, sizeof(ncclUniqueId));
       BPS_CHECK_EQ(rc, sizeof(ncclUniqueId))
           << rc << ", " << sizeof(ncclUniqueId);
-      BPS_LOG(DEBUG) << "recv nccl_id is " << (*(long long int*)nccl_id)
+      BPS_LOG(DEBUG) << "recv nccl_id is "
+                     << (*reinterpret_cast<int64_t*>(nccl_id))
                      << ", local_rank=" << local_rank;
     }
 

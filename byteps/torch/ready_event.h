@@ -33,9 +33,9 @@ using namespace byteps::common;
 #if HAVE_CUDA
 class TorchReadyEvent : public ReadyEvent {
  public:
-  TorchReadyEvent(int device);
+  explicit TorchReadyEvent(int device);
   ~TorchReadyEvent();
-  virtual bool Ready() const override;
+  bool Ready() const override;
 
  private:
   int device_ = CPU_DEVICE_ID;

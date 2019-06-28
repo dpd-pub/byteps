@@ -51,7 +51,7 @@ int byteps_local_size();
 }
 
 // Below are all for Framework plugins
-Status EnqueueTensor(BPSContext &context, std::shared_ptr<Tensor> input,
+Status EnqueueTensor(const BPSContext &context, std::shared_ptr<Tensor> input,
                      std::shared_ptr<Tensor> output,
                      std::shared_ptr<ReadyEvent> ready_event, const int device,
                      const int priority, const int version,

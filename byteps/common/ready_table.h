@@ -17,6 +17,7 @@
 #define BYTEPS_READY_TABLE_H
 
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 

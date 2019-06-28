@@ -80,7 +80,7 @@ enum QueueType {
 };
 
 const int QueueNum =
-    (int)QUEUE_NUM_AND_NOT_A_REAL_QUEUE_TYPE_AND_MUST_BE_THE_LAST;
+    static_cast<int>(QUEUE_NUM_AND_NOT_A_REAL_QUEUE_TYPE_AND_MUST_BE_THE_LAST);
 
 const std::vector<std::string> LogStrings = {
     "COORDINATE_REDUCE",    "REDUCE",   "COPYD2H", "PCIE_REDUCE",
