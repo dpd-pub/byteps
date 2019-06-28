@@ -53,7 +53,7 @@ void byteps_init() {
   if (BytePSGlobal::IsCrossPcieSwitch() || BytePSGlobal::IsDistributed()) {
     func.push_back(CopyDevice2HostLoop);
     if (BytePSGlobal::IsRootDevice()) {
-      // PUSH can be a real push in distirbuted mode
+      // PUSH can be a real push in distributed mode
       // Or a dummy barrier in cross-pcie-switch mode
       func.push_back(PushLoop);
       func.push_back(RootCopyHost2DeviceLoop);
@@ -62,49 +62,35 @@ void byteps_init() {
       func.push_back(NonRootCopyHost2DeviceLoop);
       func.push_back(NonRootCopyListenLoop);
     }
-
-    // Copy between GPU and CPU
-    if (BytePSGlobal::IsCrossPcieSwitch() || BytePSGlobal::IsDistributed()) {
-      func.push_back(CopyDevice2HostLoop);
-      if (BytePSGlobal::IsRootDevice()) {
-        // PUSH can be a real push in distributed mode
-        // Or a dummy barrier in cross-pcie-switch mode
-        func.push_back(PushLoop);
-        func.push_back(RootCopyHost2DeviceLoop);
-      } else {
-        func.push_back(CoordinatePushLoop);
-        func.push_back(NonRootCopyHost2DeviceLoop);
-        func.push_back(NonRootCopyListenLoop);
-      }
-    }
-
-    // Per-PCIe-switch NCCL calls
-    func.push_back(SyncNcclLoop);
-    if (BytePSGlobal::GetNccl()->IsSignalRoot()) {
-      func.push_back(RootNcclLoop);
-    } else {
-      func.push_back(CoordinateReduceLoop);
-      func.push_back(CoordinateBroadcastLoop);
-      func.push_back(NonRootNcclLoop);
-    }
-
-    BytePSGlobal::Start(func);
-    return;
   }
 
-  void byteps_shutdown() {
-    BytePSGlobal::Shutdown();
-    BPS_LOG(DEBUG) << "BytePS is shutdown.";
-    return;
+  // Per-PCIe-switch NCCL calls
+  func.push_back(SyncNcclLoop);
+  if (BytePSGlobal::GetNccl()->IsSignalRoot()) {
+    func.push_back(RootNcclLoop);
+  } else {
+    func.push_back(CoordinateReduceLoop);
+    func.push_back(CoordinateBroadcastLoop);
+    func.push_back(NonRootNcclLoop);
   }
 
-  int byteps_rank() { return BytePSGlobal::GetRank(); }
+  BytePSGlobal::Start(func);
+  return;
+}
 
-  int byteps_local_rank() { return BytePSGlobal::GetLocalRank(); }
+void byteps_shutdown() {
+  BytePSGlobal::Shutdown();
+  BPS_LOG(DEBUG) << "BytePS is shutdown.";
+  return;
+}
 
-  int byteps_size() { return BytePSGlobal::GetSize(); }
+int byteps_rank() { return BytePSGlobal::GetRank(); }
 
-  int byteps_local_size() { return BytePSGlobal::GetLocalSize(); }
+int byteps_local_rank() { return BytePSGlobal::GetLocalRank(); }
+
+int byteps_size() { return BytePSGlobal::GetSize(); }
+
+int byteps_local_size() { return BytePSGlobal::GetLocalSize(); }
 
 }  // extern "C"
 
@@ -346,64 +332,41 @@ std::shared_ptr<std::vector<QueueType>> GetPushQueueList(int device) {
     } else {
       queue_list->push_back(COORDINATE_PUSH);
     }
-    else {
-      queue_list->push_back(COORDINATE_REDUCE);
-      queue_list->push_back(REDUCE);
-    }
+  }
+  return queue_list;
+}
 
-    // Copy from GPU to CPU
-    if (BytePSGlobal::IsDistributed() || BytePSGlobal::IsCrossPcieSwitch()) {
-      queue_list->push_back(COPYD2H);
-    }
+std::shared_ptr<std::vector<QueueType>> GetPullQueueList(int device) {
+  auto queue_list = std::make_shared<std::vector<QueueType>>();
 
-    // Cross-PCIe-switch reduce
-    if (BytePSGlobal::IsCrossPcieSwitch()) {
-      queue_list->push_back(PCIE_REDUCE);
+  // Pull in distributed mode
+  if (BytePSGlobal::IsDistributed()) {
+    if (BytePSGlobal::IsRootDevice()) {
+      queue_list->push_back(PULL);
     }
-
-    // Push in distributed mode
-    // In case IsCrossPcieSwitch(), PUSH runs as a dummy barrier
-    if (BytePSGlobal::IsDistributed() || BytePSGlobal::IsCrossPcieSwitch()) {
-      if (BytePSGlobal::IsRootDevice()) {
-        queue_list->push_back(PUSH);
-      } else {
-        queue_list->push_back(COORDINATE_PUSH);
-      }
-    }
-    return queue_list;
   }
 
-  std::shared_ptr<std::vector<QueueType>> GetPullQueueList(int device) {
-    auto queue_list = std::make_shared<std::vector<QueueType>>();
-
-    // Pull in distributed mode
-    if (BytePSGlobal::IsDistributed()) {
-      if (BytePSGlobal::IsRootDevice()) {
-        queue_list->push_back(PULL);
-      }
+  // Pull in distirbuted mode
+  if (BytePSGlobal::IsDistributed()) {
+    if (BytePSGlobal::IsRootDevice()) {
+      queue_list->push_back(PULL);
     }
-
-    // Pull in distirbuted mode
-    if (BytePSGlobal::IsDistributed()) {
-      if (BytePSGlobal::IsRootDevice()) {
-        queue_list->push_back(PULL);
-      }
-    }
-
-    // Copy from CPU to GPU
-    if (BytePSGlobal::IsDistributed() || BytePSGlobal::IsCrossPcieSwitch()) {
-      queue_list->push_back(COPYH2D);
-    }
-
-    // Per-PCIe-switch NCCL broadcast
-    if (BytePSGlobal::GetNccl()->IsSignalRoot()) {
-      queue_list->push_back(BROADCAST);
-    } else {
-      queue_list->push_back(COORDINATE_BROADCAST);
-      queue_list->push_back(BROADCAST);
-    }
-    return queue_list;
   }
+
+  // Copy from CPU to GPU
+  if (BytePSGlobal::IsDistributed() || BytePSGlobal::IsCrossPcieSwitch()) {
+    queue_list->push_back(COPYH2D);
+  }
+
+  // Per-PCIe-switch NCCL broadcast
+  if (BytePSGlobal::GetNccl()->IsSignalRoot()) {
+    queue_list->push_back(BROADCAST);
+  } else {
+    queue_list->push_back(COORDINATE_BROADCAST);
+    queue_list->push_back(BROADCAST);
+  }
+  return queue_list;
+}
 
 }  // namespace common
 }  // namespace byteps
