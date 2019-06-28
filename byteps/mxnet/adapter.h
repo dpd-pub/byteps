@@ -26,15 +26,16 @@ namespace mxnet {
 
 using namespace byteps::common;
 
-template <class T> class MXTensor : public Tensor {
-public:
+template <class T>
+class MXTensor : public Tensor {
+ public:
   MXTensor(T* tensor);
   virtual const DataType dtype() const override;
   virtual const TensorShape shape() const override;
   virtual const void* data() const override;
   virtual int64_t size() const override;
 
-protected:
+ protected:
   T* tensor_;
 };
 
@@ -44,7 +45,7 @@ inline void ThrowIfError(const Status& status) {
   }
 }
 
-} // namespace mxnet
-} // namespace byteps
+}  // namespace mxnet
+}  // namespace byteps
 
-#endif // BYTEPS_MXNET_ADAPTER_H
+#endif  // BYTEPS_MXNET_ADAPTER_H

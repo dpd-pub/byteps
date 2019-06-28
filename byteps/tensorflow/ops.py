@@ -123,6 +123,7 @@ def broadcast(tensor, root_rank, scope='', name=None, is_variable=True):
         # TODO: needs to zero-out non-variable tensors, too
         return C_LIB.byteps_push_pull(tensor, name=name)
 
+
 @ops.RegisterGradient('BytePSBroadcast')
 def _broadcast_grad(op, grad):
     """Gradient for broadcast op.

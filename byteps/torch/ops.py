@@ -65,8 +65,8 @@ def _push_pull_function_factory(tensor):
 def _do_push_pull_async(tensor, output, average, name, version=0, priority=0):
     function = _check_function(_push_pull_function_factory, tensor)
     handle = getattr(c_lib, function)(tensor, output, average,
-                                        name.encode() if name is not None else _NULL,
-                                        version, priority)
+                                      name.encode() if name is not None else _NULL,
+                                      version, priority)
     _handle_map[handle] = (tensor, output)
     return handle
 
@@ -108,7 +108,7 @@ class BytePSPushPull(torch.autograd.Function):
     def backward(ctx, grad_output):
         # Not sure whether this is correct
         return push_pull_compress(grad_output,
-            ctx.average, ctx.name, ctx.version, ctx.priority), None, None
+                                  ctx.average, ctx.name, ctx.version, ctx.priority), None, None
 
 
 def push_pull_compress(tensor, average=True, name=None, version=0, priority=0, compression=Compression.none):
@@ -135,8 +135,10 @@ def push_pull_compress(tensor, average=True, name=None, version=0, priority=0, c
         processes.
     """
     tensor_compressed, ctx = compression.compress(tensor)
-    summed_tensor_compressed = BytePSPushPull.apply(tensor_compressed, average, name, version, priority)
+    summed_tensor_compressed = BytePSPushPull.apply(
+        tensor_compressed, average, name, version, priority)
     return compression.decompress(summed_tensor_compressed, ctx)
+
 
 def push_pull_async_inplace(tensor, average=True, name=None, version=0, priority=0):
     """
@@ -177,6 +179,7 @@ def push_pull_inplace(tensor, average=True, name=None, version=0, priority=0):
     """
     handle = push_pull_async_inplace(tensor, average, name, version, priority)
     return synchronize(handle)
+
 
 def poll(handle):
     """

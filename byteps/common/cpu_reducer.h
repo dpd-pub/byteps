@@ -27,45 +27,43 @@ namespace byteps {
 namespace common {
 
 class CpuReducer {
+ public:
+  CpuReducer(std::shared_ptr<BytePSComm> comm);
+  ~CpuReducer() {
+    if (_comm) _comm.reset();
+    BPS_LOG(DEBUG) << "Clear CpuReducer";
+  }
 
-public:
-    CpuReducer(std::shared_ptr<BytePSComm> comm);
-    ~CpuReducer() {
-        if (_comm) _comm.reset();
-        BPS_LOG(DEBUG) << "Clear CpuReducer";
-    }
-    
-    int sum(void* dst, void* src, size_t len, DataType dtype);
-    int sum(void* dst, void* src1, void* src2, size_t len, DataType dtype);
-    bool isRoot();
-    std::shared_ptr<BytePSComm> getComm() { return _comm; }
+  int sum(void* dst, void* src, size_t len, DataType dtype);
+  int sum(void* dst, void* src1, void* src2, size_t len, DataType dtype);
+  bool isRoot();
+  std::shared_ptr<BytePSComm> getComm() { return _comm; }
 
-private:
-    int _sum_float32(void* dst, void* src, size_t len);
-    int _sum_float64(void* dst, void* src, size_t len);
-    int _sum_float16(void* dst, void* src, size_t len);
-    int _sum_unit8(void* dst, void* src, size_t len);
-    int _sum_int32(void* dst, void* src, size_t len);
-    int _sum_int8(void* dst, void* src, size_t len);
-    int _sum_int64(void* dst, void* src, size_t len);
+ private:
+  int _sum_float32(void* dst, void* src, size_t len);
+  int _sum_float64(void* dst, void* src, size_t len);
+  int _sum_float16(void* dst, void* src, size_t len);
+  int _sum_unit8(void* dst, void* src, size_t len);
+  int _sum_int32(void* dst, void* src, size_t len);
+  int _sum_int8(void* dst, void* src, size_t len);
+  int _sum_int64(void* dst, void* src, size_t len);
 
-    int _sum_float32(void* dst, void* src1, void* src2, size_t len);
-    int _sum_float64(void* dst, void* src1, void* src2, size_t len);
-    int _sum_float16(void* dst, void* src1, void* src2, size_t len);
-    int _sum_unit8(void* dst, void* src1, void* src2, size_t len);
-    int _sum_int32(void* dst, void* src1, void* src2, size_t len);
-    int _sum_int8(void* dst, void* src1, void* src2, size_t len);
-    int _sum_int64(void* dst, void* src1, void* src2, size_t len);
+  int _sum_float32(void* dst, void* src1, void* src2, size_t len);
+  int _sum_float64(void* dst, void* src1, void* src2, size_t len);
+  int _sum_float16(void* dst, void* src1, void* src2, size_t len);
+  int _sum_unit8(void* dst, void* src1, void* src2, size_t len);
+  int _sum_int32(void* dst, void* src1, void* src2, size_t len);
+  int _sum_int8(void* dst, void* src1, void* src2, size_t len);
+  int _sum_int64(void* dst, void* src1, void* src2, size_t len);
 
-    float _convert_half_to_full_precision(uint16_t h);
-    uint16_t _convert_full_to_half_precision(float f);
+  float _convert_half_to_full_precision(uint16_t h);
+  uint16_t _convert_full_to_half_precision(float f);
 
-    std::shared_ptr<BytePSComm> _comm;
-    int _num_threads;
+  std::shared_ptr<BytePSComm> _comm;
+  int _num_threads;
 };
 
+}  // namespace common
+}  // namespace byteps
 
-} // namespace common
-} // namespace byteps
-
-#endif // BYTEPS_CPU_REDUCER_H
+#endif  // BYTEPS_CPU_REDUCER_H
