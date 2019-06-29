@@ -67,7 +67,7 @@ std::shared_ptr<CpuReducer> BytePSGlobal::_cpu_reducer;
 uint64_t BytePSGlobal::_sample_key = std::numeric_limits<uint64_t>::max();
 
 BytePSScheduledQueue* BytePSGlobal::GetScheduledQueue(QueueType queueType) {
-  return reinterpret_cast<BytePSScheduledQueue*>(_queues[queueType]);
+  return (BytePSScheduledQueue*)(_queues[queueType]);
 }
 
 void BytePSGlobal::CreateScheduledQueue(QueueType queueType) {
@@ -258,9 +258,9 @@ void BytePSGlobal::Init() {
 
   // Create CUDA streams for GPU-CPU copies
   _copy_host2device_stream =
-      reinterpret_case<cudaStream_t*>(std::malloc(sizeof(cudaStream_t) * 1));
+      reinterpret_cast<cudaStream_t*>(std::malloc(sizeof(cudaStream_t) * 1));
   _copy_device2host_stream =
-      reinterpret_case<cudaStream_t*>(std::malloc(sizeof(cudaStream_t) * 1));
+      reinterpret_cast<cudaStream_t*>(std::malloc(sizeof(cudaStream_t) * 1));
   CUDA_CALL(cudaStreamCreateWithFlags(_copy_host2device_stream,
                                       cudaStreamNonBlocking));
   CUDA_CALL(cudaStreamCreateWithFlags(_copy_device2host_stream,
